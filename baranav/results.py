@@ -23,4 +23,3 @@ def get_results(query: str) -> list:
     results += app_results + web_results + ggl_results
     results = list(filter(None, results))
     return results
-hii = [["/home/nur/Downloads/1544x1544_circle.png","hii","a word used by me in greeting.","0"],["/home/nur/Downloads/1544x1544_circle.png","Firefox","Web Browser"]]

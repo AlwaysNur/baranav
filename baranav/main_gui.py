@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QShortcut
 
-from results import hii
+from results import get_results
 from results_gui import ResultsContainer
 
 
@@ -30,9 +30,10 @@ class OverlayBar(QWidget):
 
         QShortcut(QKeySequence("Esc"), self).activated.connect(QCoreApplication.quit)
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
+        self.lay = QVBoxLayout()
+        self.lay.setContentsMargins(10, 10, 10, 10)
+        self.lay.setSpacing(8)
+        self.setLayout(self.lay)
 
         self.line_edit = QLineEdit(self)
         self.line_edit.setPlaceholderText("Search, Calculate, and so much more!")
@@ -41,16 +42,35 @@ class OverlayBar(QWidget):
             "border-top-left-radius: 8px; border-top-right-radius: 8px;"
         )
         self.line_edit.setFixedHeight(40)
-        layout.addWidget(self.line_edit)
-
-        # results area with each row as its own QWidget (so background + radius apply cleanly)
-        self.results = ResultsContainer(hii)
-        layout.addWidget(self.results)
-
-        self.setLayout(layout)
+        self.lay.addWidget(self.line_edit)
         self.line_edit.setFocus()
+
+        self.results = QWidget().setFixedHeight(1)
+
+        self.lay.addWidget(self.results)
+
         self.line_edit.textChanged.connect(self.on_text_changed)
 
     def on_text_changed(self, text):
-        # placeholder for filtering
-        print(text)
+        results_list = get_results(text)
+
+        # Create a new ResultsContainer with the updated results
+        new_results_widget = ResultsContainer(results_list,280)
+
+        # Find index of current results widget in the layout
+        index = self.lay.indexOf(self.results)
+        if index == -1:
+            # fallback: append
+            self.lay.addWidget(new_results_widget)
+        else:
+            # remove the old widget from the layout and delete it
+            old = self.results
+            self.lay.takeAt(index)  # remove the layout item
+            old.setParent(None)
+            old.deleteLater()
+
+            # insert the new widget at the same position
+            self.lay.insertWidget(index, new_results_widget)
+
+        # keep reference to the current results widget
+        self.results = new_results_widget

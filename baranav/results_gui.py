@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (
     QWidget,
@@ -12,14 +12,21 @@ from PyQt5.QtWidgets import (
 )
 
 
+def click(do):
+    do()
+    QCoreApplication.quit()
+
 class ResultsContainer(QWidget):
+    def make_click_handler(self, i: int):
+        return lambda event: click(self.items[i][4])
+
     def __init__(self, items, max_height=240):
         """
         items: list of [img_path, text, subtext]
         max_height: maximum height of the results area before scrolling
         """
         super().__init__()
-
+        self.items = items
         # overall background for the widget (behind the scroll area)
         self.setStyleSheet("background-color: #1e1e2e;")
         main_layout = QVBoxLayout(self)
@@ -30,47 +37,32 @@ class ResultsContainer(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.NoFrame)
-        # make scroll background match parent (so only the rows' backgrounds show)
         scroll.setStyleSheet("background-color: transparent; border: none;")
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Keep the vertical scrollbar functional but visually hidden:
-        # - setting policy to AlwaysOn ensures the scrollbar exists (so wheel/keyboard scrolling works),
-        # - then we set the scrollbar stylesheet to zero width / transparent so it doesn't appear.
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        scroll.verticalScrollBar().setStyleSheet(
-            """
-            QScrollBar:vertical {
-                background: transparent;
-                width: 0px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: transparent;
-                min-height: 20px;
-            }
-            QScrollBar::add-line, QScrollBar::sub-line {
-                height: 0px;
-            }
-            """
-        )
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # keep scrollbar hidden visually
 
         # Content widget that holds the rows
         content_widget = QWidget()
+        # Add a little bottom margin so the last row doesn't get visually clipped by the parent's rounded corners
+        # (This fixes "cut off" appearance.)
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setContentsMargins(0, 0, 0, 8)  # <-- bottom padding added
         content_layout.setSpacing(8)
 
-        for item in items:
-            img_path = item[0] if len(item) > 0 else ""
-            text = str(item[1]) if len(item) > 1 else ""
-            subtext = str(item[2]) if len(item) > 2 else ""
+        # Styles for rows
+        normal_row_style = "background-color: #313244; color: #cdd6f4; border-radius: 6px;"
 
-            # Row widget: background (gray) applies to the whole row
+        for item in range(len(items)):
+            img_path = items[item][0] if len(items[item][0]) > 0 else ""
+            text = str(items[item][1]) if len(items[item][1]) > 0 else ""
+            subtext = str(items[item][2]) if len(items[item][2]) > 0 else ""
+
             row_widget = QWidget()
-            row_widget.setStyleSheet(
-                "background-color: #313244; color: #cdd6f4; border-radius: 6px;"
-            )
+            row_widget.setFixedHeight(49)
+
+            row_widget.mousePressEvent = self.make_click_handler(item)
+
+            row_widget.setStyleSheet(normal_row_style)
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(8, 6, 8, 6)
             row_layout.setSpacing(8)
@@ -80,12 +72,13 @@ class ResultsContainer(QWidget):
             pixmap = QPixmap(img_path) if img_path and os.path.exists(img_path) else QPixmap()
             if pixmap.isNull():
                 # create a simple gray placeholder pixmap so the row doesn't collapse
-                placeholder = QPixmap(40, 40)
+                placeholder = QPixmap(25, 25)
                 placeholder.fill(Qt.gray)
                 pixmap = placeholder
-            pixmap = pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             image_label.setPixmap(pixmap)
-            image_label.setFixedSize(40, 40)
+            image_label.setFixedSize(25, 25)
+            # noinspection PyTypeChecker
             image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
             # Text container: vertical stack for main text and subtext
@@ -114,16 +107,21 @@ class ResultsContainer(QWidget):
             row_layout.addWidget(text_container, 1)
             row_layout.addStretch()
 
+            # noinspection PyTypeChecker
+            row_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
             # Add the row widget to the content layout
             content_layout.addWidget(row_widget)
 
-        # Add a stretch at the end so rows hug the top
-        content_layout.addStretch()
+        # Add a small spacer at the end instead of a stretch to avoid pushing rows into obscure layout behaviour
+        content_layout.addSpacing(4)
 
         scroll.setWidget(content_widget)
 
-        # Limit height so the scroll bar appears when needed
+        # Limit height so the scroll area appears when needed
         scroll.setMaximumHeight(max_height)
+        # noinspection PyTypeChecker
+        scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         main_layout.addWidget(scroll)
         self.setLayout(main_layout)

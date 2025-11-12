@@ -1,5 +1,10 @@
 import os
 import webbrowser
+import re
+
+app_directories_list = ["/usr/share/applications/"]
+url_regex = r"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
+apps_list = []
 
 os.chdir(os.path.dirname(__file__))
 
@@ -17,9 +22,9 @@ def get_results(query: str) -> list:
     web_results = []
     app_results = []
     ggl_results = []
-
-    if query.startswith(("https://","http://","www.",)):
-        web_results.append(["icons/url.svg",f'Open "{query}" in browser',"Web",1,lambda: webbrowser.open(query)])
+    if query.startswith(("https://", "http://", "www.",)) or re.match(url_regex, query):
+        web_results.append(["icons/url.svg", f'Open "{query}" in browser', "Web", 1, lambda: webbrowser.open(query)])
+    ggl_results.append(["icons/url.svg", f'Search Google for "{query}"', "Google", 1, lambda: webbrowser.open(f"google.com/search?q={query}")])
     results += app_results + web_results + ggl_results
     results = list(filter(None, results))
     return results

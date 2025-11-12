@@ -45,7 +45,7 @@ class OverlayBar(QWidget):
         self.lay.addWidget(self.line_edit)
         self.line_edit.setFocus()
 
-        self.results = QWidget().setFixedHeight(1)
+        self.results = QWidget().setFixedHeight(0)
 
         self.lay.addWidget(self.results)
 
@@ -53,7 +53,18 @@ class OverlayBar(QWidget):
 
     def on_text_changed(self, text):
         results_list = get_results(text)
-
+        if not results_list or text == "":
+            index = self.lay.indexOf(self.results)
+            if index == -1:
+                return
+            # remove the old widget from the layout and delete it
+            old = self.results
+            self.lay.takeAt(index)  # remove the layout item
+            old.setParent(None)
+            old.deleteLater()
+            self.setFixedHeight(40+(2*8))
+        else:
+            self.setFixedHeight(200)
         # Create a new ResultsContainer with the updated results
         new_results_widget = ResultsContainer(results_list,280)
 

@@ -1,5 +1,10 @@
 import os
 import webbrowser
+import re
+
+app_directories_list = ["/usr/share/applications/"]
+url_regex = r"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"
+apps_list = []
 
 os.chdir(os.path.dirname(__file__))
 
